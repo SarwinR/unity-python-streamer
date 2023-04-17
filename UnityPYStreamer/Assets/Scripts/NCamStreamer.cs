@@ -1,11 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
-
-public class CameraStreamer : MonoBehaviour
+public class NCameraStreamer : MonoBehaviour
 {
     Thread thread;
 
@@ -18,33 +16,26 @@ public class CameraStreamer : MonoBehaviour
     private Socket socket;
     private bool connected;
 
-    
-    Queue<byte[]> buffer = new Queue<byte[]>();
-    
+    private Queue<byte[]> buffer;
+
+    public NCameraStreamer(string host, int port)
+    {
+        this.host = host;
+        this.port = port;
+        buffer = new Queue<byte[]>();
+    }
 
     void Start()
     {
         // Initialize the texture
         renderTexture = new RenderTexture(720, 480, 24, RenderTextureFormat.ARGB32);
-        GetComponent<Camera>().targetTexture = renderTexture;
+        Camera.main.targetTexture = renderTexture;
 
         // Start the connection process in a separate thread
         connected = false;
 
         thread = new Thread(SendFrame);
         thread.Start();
-    }
-
-    private void Update()
-    {
-        RenderTexture.active = renderTexture;
-        Texture2D texture = new Texture2D(renderTexture.width, renderTexture.height, TextureFormat.ARGB32, false);
-        texture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
-        texture.Apply();
-
-        byte[] data = texture.GetRawTextureData();
-        buffer.Clear();
-        buffer.Enqueue(data);
     }
 
     void SendFrame(object data)
@@ -54,10 +45,8 @@ public class CameraStreamer : MonoBehaviour
         {
             if (connected)
             {
-                print(port.ToString() + buffer.ToString());
-                if(buffer.TryDequeue(out byte[] bufferData))
+                if (buffer.TryPeek(out byte[] bufferData))
                 {
-                    print(port.ToString() + bufferData.ToString());
                     try
                     {
                         socket.Send(bufferData);
@@ -84,7 +73,7 @@ public class CameraStreamer : MonoBehaviour
                 catch (SocketException e)
                 {
                     // Connection failed
-                    Debug.LogWarning("Failed to connect to " + host + ":" + port + " - " + e.Message);       
+                    Debug.LogWarning("Failed to connect to " + host + ":" + port + " - " + e.Message);
                 }
             }
         }
