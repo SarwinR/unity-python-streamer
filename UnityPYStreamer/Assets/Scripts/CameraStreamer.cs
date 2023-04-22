@@ -16,7 +16,7 @@ public class CameraStreamer : MonoBehaviour
 
     private RenderTexture renderTexture;
     private Socket socket;
-    private bool connected;
+    private bool connected = false;
 
     
     Queue<byte[]> buffer = new Queue<byte[]>();
@@ -24,12 +24,8 @@ public class CameraStreamer : MonoBehaviour
 
     void Start()
     {
-        // Initialize the texture
-        renderTexture = new RenderTexture(720, 480, 24, RenderTextureFormat.ARGB32);
+        renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
         GetComponent<Camera>().targetTexture = renderTexture;
-
-        // Start the connection process in a separate thread
-        connected = false;
 
         thread = new Thread(SendFrame);
         thread.Start();
@@ -49,15 +45,12 @@ public class CameraStreamer : MonoBehaviour
 
     void SendFrame(object data)
     {
-        print(data);
         while (true)
         {
             if (connected)
             {
-                print(port.ToString() + buffer.ToString());
                 if(buffer.TryDequeue(out byte[] bufferData))
                 {
-                    print(port.ToString() + bufferData.ToString());
                     try
                     {
                         socket.Send(bufferData);
@@ -90,36 +83,12 @@ public class CameraStreamer : MonoBehaviour
         }
     }
 
-    void TryConnect()
-    {
-        if (!connected)
-        {
-            try
-            {
-                // Attempt to connect to the server
-                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                socket.Connect(host, port);
-
-                // Connection successful
-                connected = true;
-                Debug.Log("Connected to " + host + ":" + port);
-            }
-            catch (SocketException e)
-            {
-                // Connection failed
-                Debug.LogWarning("Failed to connect to " + host + ":" + port + " - " + e.Message);
-
-            }
-        }
-    }
-
     void OnApplicationQuit()
     {
         if (connected)
         {
             socket.Close();
         }
-
         thread.Abort();
     }
 }
